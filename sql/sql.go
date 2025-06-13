@@ -221,63 +221,6 @@ func (op *GetProductSalesByLimit) Execute(int) error {
 	return rows.Err()
 }
 
-type GetOrderFullDetailsByID struct {
-	OrderID int
-	SQL
-}
-
-func (op *GetOrderFullDetailsByID) Name() string {
-	return "Get Order Full Details by ID (Nested Preload)"
-}
-
-func (op *GetOrderFullDetailsByID) Execute(int) error {
-	var order models.Order
-	err := op.db.
-		QueryRow(
-			"SELECT id, customer_id, date, total, created_at FROM orders WHERE id = $1",
-			op.OrderID,
-		).
-		Scan(
-			&order.ID,
-			&order.CustomerID,
-			&order.Date,
-			&order.Total,
-			&order.CreatedAt,
-		)
-	if err != nil {
-		return err
-	}
-
-	rows, err := op.db.
-		Query(
-			`SELECT 
-            op.id, op.order_id, op.product_id, op.quantity, op.price,
-            p.name, p.description, p.price, p.stock, p.created_at
-        FROM order_products op
-        JOIN products p ON p.id = op.product_id
-        WHERE op.order_id = $1`,
-			op.OrderID,
-		)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var op models.OrderProduct
-		var p models.Product
-		err := rows.Scan(
-			&op.ID, &op.OrderID, &op.ProductID, &op.Quantity, &op.Price,
-			&p.Name, &p.Description, &p.Price, &p.Stock, &p.CreatedAt,
-		)
-		if err != nil {
-			return err
-		}
-	}
-
-	return rows.Err()
-}
-
 func main() {
 	dsn := "host=localhost user= password= dbname= port=5432 sslmode=disable"
 	db, err := sql.Open("postgres", dsn)
@@ -318,19 +261,6 @@ func main() {
 		log.Fatalf("failed to get product: %v", err)
 	}
 
-	var order models.Order
-	if err = db.
-		QueryRow("SELECT id, customer_id, date, total, created_at FROM orders LIMIT 1").
-		Scan(
-			&order.ID,
-			&order.CustomerID,
-			&order.Date,
-			&order.Total,
-			&order.CreatedAt,
-		); err != nil {
-		log.Fatalf("failed to get order: %v", err)
-	}
-
 	iterations := 10000
 
 	operations := []utils.Operation{
@@ -358,10 +288,6 @@ func main() {
 		&GetProductSalesByLimit{
 			Limit: 10,
 			SQL:   SQL{db},
-		},
-		&GetOrderFullDetailsByID{
-			OrderID: order.ID,
-			SQL:     SQL{db},
 		},
 		&DeleteProductByName{
 			SQL: SQL{db},

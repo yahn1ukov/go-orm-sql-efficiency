@@ -166,24 +166,6 @@ func (op *GetProductSalesByLimit) Execute(int) error {
 		Error
 }
 
-type GetOrderFullDetailsByID struct {
-	OrderID int
-	GORM
-}
-
-func (op *GetOrderFullDetailsByID) Name() string {
-	return "Get Order Full Details by ID (Nested Preload)"
-}
-
-func (op *GetOrderFullDetailsByID) Execute(int) error {
-	var order models.Order
-	return op.db.
-		Preload("Products").
-		Preload("Products.Product").
-		First(&order, op.OrderID).
-		Error
-}
-
 func main() {
 	dsn := "host=localhost user= password= dbname= port=5432 sslmode=disable"
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
@@ -201,11 +183,6 @@ func main() {
 	var product models.Product
 	if err = db.First(&product).Error; err != nil {
 		log.Fatalf("failed to get product: %v", err)
-	}
-
-	var order models.Order
-	if err = db.First(&order).Error; err != nil {
-		log.Fatalf("failed to get order: %v", err)
 	}
 
 	iterations := 10000
@@ -235,10 +212,6 @@ func main() {
 		&GetProductSalesByLimit{
 			Limit: 10,
 			GORM:  GORM{db},
-		},
-		&GetOrderFullDetailsByID{
-			OrderID: order.ID,
-			GORM:    GORM{db},
 		},
 		&DeleteProductByName{
 			GORM: GORM{db},

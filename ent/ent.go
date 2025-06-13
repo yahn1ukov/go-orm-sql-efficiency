@@ -12,7 +12,6 @@ import (
 	_ "github.com/lib/pq"
 	ent "github.com/yahn1ukov/go-orm-sql-efficiency/ent/generated"
 	"github.com/yahn1ukov/go-orm-sql-efficiency/ent/generated/customer"
-	"github.com/yahn1ukov/go-orm-sql-efficiency/ent/generated/order"
 	"github.com/yahn1ukov/go-orm-sql-efficiency/ent/generated/product"
 	"github.com/yahn1ukov/go-orm-sql-efficiency/utils"
 )
@@ -221,27 +220,6 @@ func (op *GetProductSalesByLimit) Execute(int) error {
 	return rows.Err()
 }
 
-type GetOrderFullDetailsByID struct {
-	OrderID int
-	Ent
-}
-
-func (op *GetOrderFullDetailsByID) Name() string {
-	return "Get Order Full Details by ID (Nested Preload)"
-}
-
-func (op *GetOrderFullDetailsByID) Execute(int) error {
-	_, err := op.client.Order.
-		Query().
-		Where(order.ID(op.OrderID)).
-		WithProducts(func(q *ent.OrderProductQuery) {
-			q.WithProduct()
-		}).
-		Only(context.Background())
-
-	return err
-}
-
 func main() {
 	dsn := "host=localhost user= password= dbname= port=5432 sslmode=disable"
 	db, err := sql.Open("postgres", dsn)
@@ -268,13 +246,6 @@ func main() {
 		First(ctx)
 	if err != nil {
 		log.Fatalf("failed to get product: %v", err)
-	}
-
-	orderEntity, err := client.Order.
-		Query().
-		First(ctx)
-	if err != nil {
-		log.Fatalf("failed to get order: %v", err)
 	}
 
 	iterations := 10000
@@ -309,10 +280,6 @@ func main() {
 		&GetProductSalesByLimit{
 			Limit: 10,
 			Ent:   clients,
-		},
-		&GetOrderFullDetailsByID{
-			OrderID: orderEntity.ID,
-			Ent:     clients,
 		},
 		&DeleteProductByName{
 			Ent: clients,
